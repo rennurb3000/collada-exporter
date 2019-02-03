@@ -1,4 +1,6 @@
-# ##### BEGIN GPL LICENSE BLOCK #####
+##UPDATED TO BLENDER 2.8 BY THOMAS BRUNNE
+
+##### BEGIN GPL LICENSE BLOCK #####
 #
 #  This program is free software; you can redistribute it and/or
 #  modify it under the terms of the GNU General Public License
@@ -19,11 +21,11 @@ import bpy
 from bpy.props import StringProperty, BoolProperty, FloatProperty, EnumProperty
 
 from bpy_extras.io_utils import ExportHelper
+
 bl_info = {
     "name": "Better Collada Exporter",
     "author": "Juan Linietsky",
-    "blender": (2, 5, 8),
-    "api": 38691,
+    "blender": (2, 80, 0),
     "location": "File > Import-Export",
     "description": ("Export DAE Scenes. This plugin actually works better! "
                     "Otherwise contact the Godot Engine community."),
@@ -31,14 +33,13 @@ bl_info = {
     "wiki_url": ("https://godotengine.org"),
     "tracker_url": "https://github.com/godotengine/collada-exporter",
     "support": "OFFICIAL",
-    "category": "Import-Export"}
+"category": "Import-Export"}
 
 if "bpy" in locals():
     import imp
     if "export_dae" in locals():
-        imp.reload(export_dae)  # noqa
-
-
+        imp.reload(export_dae) # noqa
+        
 class ExportDAE(bpy.types.Operator, ExportHelper):
     """Selection to DAE"""
     bl_idname = "export_scene.dae"
@@ -97,11 +98,11 @@ class ExportDAE(bpy.types.Operator, ExportHelper):
         description="Copy Images (create images/ subfolder)",
         default=False,
         )
-    use_active_layers = BoolProperty(
-        name="Active Layers",
-        description="Export only objects on the active layers.",
-        default=True,
-        )
+    #use_active_layers = BoolProperty(
+     #   name="Active Layers",
+      #  description="Export only objects on the active layers.",
+      #default=True,
+       # )
     use_exclude_ctrl_bones = BoolProperty(
         name="Exclude Control Bones",
         description=("Exclude skeleton bones with names beginning with 'ctrl' "
@@ -136,7 +137,6 @@ class ExportDAE(bpy.types.Operator, ExportHelper):
         description="Export shape keys for selected objects.",
         default=False,
         )
-		
     anim_optimize_precision = FloatProperty(
         name="Precision",
         description=("Tolerence for comparing double keyframes "
@@ -177,15 +177,15 @@ def menu_func(self, context):
 
 
 def register():
-    bpy.utils.register_module(__name__)
-
-    bpy.types.INFO_MT_file_export.append(menu_func)
+    bpy.utils.register_class(ExportDAE)
+    bpy.types.TOPBAR_MT_file_export.append(menu_func)
 
 
 def unregister():
-    bpy.utils.unregister_module(__name__)
+    bpy.utils.unregister_class(ExportDAE)
+    bpy.types.TOPBAR_MT_file_export.remove(menu_func_export)
 
-    bpy.types.INFO_MT_file_export.remove(menu_func)
 
 if __name__ == "__main__":
     register()
+

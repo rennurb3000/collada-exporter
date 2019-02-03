@@ -20,7 +20,6 @@
 
 """
 This script is an exporter to the Khronos Collada file format.
-
 http://www.khronos.org/collada/
 """
 
@@ -533,9 +532,9 @@ class DaeExporter:
         name_to_use = mesh.name
         if (custom_name is not None and custom_name != ""):
             name_to_use = custom_name
-
-        mesh = node.to_mesh(self.scene, apply_modifiers,
-                            "RENDER")  # TODO: Review
+        #added depsgraph
+       
+        mesh = node.to_mesh(depsgraph=bpy.context.depsgraph, apply_modifiers=apply_modifiers)  # TODO: Review
         if(armature_modifier):
             for i,arm in enumerate(bpy.data.armatures):
                 arm.pose_position = armature_poses[i]
@@ -551,7 +550,7 @@ class DaeExporter:
             bm.to_mesh(mesh)
             bm.free()
 
-        mesh.update(calc_tessface=True)
+        mesh.update(calc_loop_triangles=True)
         vertices = []
         vertex_map = {}
         surface_indices = {}
@@ -569,8 +568,8 @@ class DaeExporter:
         has_colors = len(mesh.vertex_colors)
         mat_assign = []
 
-        uv_layer_count = len(mesh.uv_textures)
-        if has_tangents and len(mesh.uv_textures):
+        uv_layer_count = len(mesh.uv_layers)
+        if has_tangents and uv_layer_count:
             try:
                 mesh.calc_tangents()
             except:
@@ -596,7 +595,9 @@ class DaeExporter:
                     mat = mesh.materials[f.material_index]
                 except:
                     mat = None
-
+                # TODO material texture slot is only available in blender internal, therefore we need to change the whole system !!!!
+                mat = None
+                
                 if (mat is not None):
                     materials[f.material_index] = self.export_material(
                         mat, mesh.show_double_sided)
@@ -1122,10 +1123,10 @@ class DaeExporter:
         xform = bone.matrix_local
         if (is_ctrl_bone is False):
             si["bone_bind_poses"].append(
-                    (si["armature_xform"] * xform).inverted_safe())
+                    (si["armature_xform"] @ xform).inverted_safe())
 
         if (bone.parent is not None):
-            xform = bone.parent.matrix_local.inverted_safe() * xform
+            xform = bone.parent.matrix_local.inverted_safe() @ xform
         else:
             si["skeleton_nodes"].append(boneid)
 
@@ -1453,8 +1454,11 @@ class DaeExporter:
         if (node not in self.valid_nodes):
             return
 
-        prev_node = bpy.context.scene.objects.active
-        bpy.context.scene.objects.active = node
+        #prev_node = bpy.context.scene.objects.active
+        prev_node = bpy.context.view_layer.objects.active
+        # bpy.context.scene.objects.active = node
+
+        bpy.context.view_layer.objects.active = node
 
         self.writel(
             S_NODES, il, "<node id=\"{}\" name=\"{}\" type=\"NODE\">".format(
@@ -1482,20 +1486,21 @@ class DaeExporter:
 
         il -= 1
         self.writel(S_NODES, il, "</node>")
-        bpy.context.scene.objects.active = prev_node
+        bpy.context.view_layer.objects.active = prev_node
 
     def is_node_valid(self, node):
         if (node.type not in self.config["object_types"]):
             return False
 
-        if (self.config["use_active_layers"]):
-            valid = False
-            for i in range(20):
-                if (node.layers[i] and self.scene.layers[i]):
-                    valid = True
-                    break
-            if (not valid):
-                return False
+	#TODO: export only active COLLECTION instead layer
+        #if (self.config["use_active_layers"]):
+         #   valid = False
+          #  for i in range(20):
+           #     if (node.layers[i] and context.render_layer.objects[i]):
+            #        valid = True
+             #       break
+            #if (not valid):
+             #   return False
 
         if (self.config["use_export_selected"] and not node.select):
             return False
@@ -1528,7 +1533,9 @@ class DaeExporter:
     def export_asset(self):
         self.writel(S_ASSET, 0, "<asset>")
         self.writel(S_ASSET, 1, "<contributor>")
-        author = bpy.context.user_preferences.system.author or "Anonymous"
+#TODO find Author in blender
+        #author = bpy.context.user_preferences.system.author or "Anonymous"
+        author = "Anonymous"
         self.writel(S_ASSET, 2, "<author>{}</author>".format(author))
         self.writel(
             S_ASSET, 2, "<authoring_tool>Collada Exporter for Blender 2.6+, "
@@ -1760,7 +1767,7 @@ class DaeExporter:
                             if (not parent_invisible):
                                 mtx = (
                                     parent_posebone.matrix
-                                    .inverted_safe() * mtx)
+                                    .inverted_safe() @ mtx)
 
                         xform_cache[bone_name].append((key, mtx))
 
@@ -1967,3 +1974,4 @@ def save(operator, context, filepath="", use_selection=False, **kwargs):
         exp.export()
 
     return {"FINISHED"}
+
